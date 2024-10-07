@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>トルスカ語→ドゥルグ語変換器</title>
+</head>
+<body>
+    <h1>トルスカ語→ドゥルグ語変換器</h1>
+    <input type="text" id="inputWord" placeholder="単語を入力">
+    <button onclick="convert()">変換</button>
+    <p id="outputWord"></p>
+
+    <script>
+        function syllableSplit(word) {
+            const syllablePattern = /(?:m|p|pr|sp|spr|b|br|f|fr|v|n|t|tr|st|str|d|dr|c|cl|sc|scl|s|sl|z|r|l|ch|chr|sch|schr|sh|shr|j|ņ|ç|çļ|sç|sçļ|ģ|ģl|ç|çļ|çh|çhļ|y|ļ|k|kr|sk|skr|g|gr|x|xr|w|')?(?:i|ï|u|ü|e|ë|o|ö|a)(?:gh|ģh)?(?:m|p|b|f|v|n|t|d|c|s|z|l|ch|sh|j|ņ|ç|ģ|çh|ļ|ng|k|g|x)?/g;
+            return word.match(syllablePattern) || [];
+        }
+
+        function replaceSyllables(syllables, word) {
+            // 語に含まれる母音をチェック
+            const containsSpecialVowels = ['i', 'ü', 'e', 'ö'].some(vowel => word.includes(vowel));
+
+            // 規則的な子音の置換
+            const consonantReplacements = {
+                'spr': 'tr', 'schr': 'kr', 'sçl': 'qr', 'çhļ': 'kr', 'çļ': 'gr', 'ģļ': 'ghr',
+                'str': 'kr', 'skr': 'qr', 'xr': 'kr', 'kr': 'gr', 'shr': 'chr', 'chr': 'j',
+                'scl': 'sl', 'sch': 'k', 'çh': 'k', 'ç': 'g', 'ģh': 'x', 'ģ': 'gh',
+                'sp': 't', 'sl': 'cl', 'fr': 'pr', 'pr': 'br', 'br': 'v', 'cl': 'dr',
+                'dr': 'z', 'tr': 'r', 'st': 'k', 'sk': 'q', 'sç': 'q', 'sh': 'ch',
+                'ch': 'j', 'f': 'p', 'p': 'b', 'b': 'v', 's': 'c', 'c': 'd', 'd': 'z',
+                't': 'r', 'r': '', 'l': 'l', 'x': 'k', 'k': 'g', 'g': 'gh', 'gh': 'x',
+                'ņ': 'n', 'ļ': 'y', "'": 'q'
+            };
+
+            // 母音の置換ルール
+            const vowelReplacements = containsSpecialVowels
+                ? { 'a': 'i', 'i': 'e', 'ï': 'ui', 'u': 'o', 'ü': 'ü', 'e': 'a', 'ë': 'oi', 'o': 'u', 'ö': 'ö' }
+                : { 'a': 'u', 'i': 'e', 'ï': 'ui', 'u': 'o', 'ü': 'ü', 'e': 'a', 'ë': 'oi', 'o': 'u', 'ö': 'ö' };
+
+            // 変則的な置換ルール (語頭、語中、音節末で異なる)
+            const irregularReplacements = {
+                'v': { 'head': 'f', 'middle': 'v', 'tail': 'f' },
+                'z': { 'head': 's', 'middle': 'z', 'tail': 's' },
+                'j': { 'head': 'sh', 'middle': 'j', 'tail': 'sh' },
+                'ņ': { 'head': 'n', 'middle': 'n', 'tail': 'ng' },
+                'ļ': { 'head': 'y', 'middle': 'y', 'tail': 'l' },
+                'gr': { 'head': 'xr', 'middle': 'ghr', 'tail': 'xr' }
+            };
+
+            // 各音節の置換処理
+            return syllables.map((syllable, index) => {
+                let replacedSyllable = syllable;
+                console.log(syllable);
+
+                // 子音の置換 (最初に行う)
+                for (let [old, newStr] of Object.entries(consonantReplacements)) {
+                    if (replacedSyllable.includes(old)) {
+                        replacedSyllable = replacedSyllable.replace(old, newStr);
+                        break; // 1つの子音置換のみ行う
+                    }
+                }
+                console.log(replacedSyllable);
+
+                // 変則的な子音の置換
+                for (let [old, positions] of Object.entries(irregularReplacements)) {
+                    if (replacedSyllable.includes(old)) {
+                        const isHead = index === 0; // 語頭
+                        const isTail = index === syllables.length - 1; // 音節末
+                        const position = isHead ? 'head' : (isTail ? 'tail' : 'middle');
+                        replacedSyllable = replacedSyllable.replace(old, positions[position]);
+                        break;
+                    }
+                }
+
+                // 母音の置換 (子音の置換後に行う)
+                for (let [old, newStr] of Object.entries(vowelReplacements)) {
+                    if (replacedSyllable.includes(old)) {
+                        replacedSyllable = replacedSyllable.replace(old, newStr);
+                        break; // 1つの母音置換のみ行う
+                    }
+                }
+
+                return replacedSyllable;
+            });
+        }
+
+        function convert() {
+            const inputWord = document.getElementById('inputWord').value;
+            const syllables = syllableSplit(inputWord);
+            const convertedSyllables = replaceSyllables(syllables, inputWord);
+            const outputWord = convertedSyllables.join('');
+            document.getElementById('outputWord').innerText = `変換後: ${outputWord}`;
+        }
+    </script>
+</body>
+</html>
